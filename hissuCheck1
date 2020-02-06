@@ -1,0 +1,64 @@
+// 最初にUTF-8の設定が必要
+// https://tonari-it.com/vba-csv-utf8/
+// C3にはディレクトリ
+// D3にはファイル名
+// E3には該当する必須区分の記載
+Sub fileRead()
+    ' ファイル名取得
+    Dim pass As String
+    Dim fileName As String
+    Dim dataFile As String
+    pass = Range("C3").Value
+    fileName = Range("D3").Value
+    dataFile = pass + "\" + fileName
+    
+    ' 必須データ
+    Dim hissu As String
+    hissu = Range("E3").Value
+    
+    ' 必須チェック
+    Dim data As String
+    Dim dataArr As Variant
+    Dim adoSt As Object
+    Set adoSt = CreateObject("ADODB.Stream")
+    
+    ' ヘッダーの確認
+    Dim i As Integer
+    i = 0
+    ' 必須チェック対象の確認
+    Dim hissuArr As Collection
+    Set hissuArr = New Collection
+    
+    With adoSt
+        .Charset = "UTF-8"
+        .Open
+        .LoadFromFile (dataFile)
+        
+        Do Until .EOS
+            data = .ReadText(adReadLine)
+            dataArr = Split(data, ",")
+            If i = 0 Then
+                Call checkHissu(dataArr, hissuArr, hissu)
+            Else
+                If dataArr(hissuArr(1)) = "" Then
+                    MsgBox (hissu + "が空のデータ" + data)
+                End If
+            End If
+            i = i + 1
+        Loop
+        .Close
+    End With
+    MsgBox ("処理終了")
+End Sub
+
+Sub checkHissu(dataArr As Variant, hissuArr As Collection, hissu As String)
+    For j = 0 To UBound(dataArr)
+        If dataArr(j) = hissu Then
+            With hissuArr
+                .Add j
+            End With
+        End If
+    Next j
+End Sub
+
+
