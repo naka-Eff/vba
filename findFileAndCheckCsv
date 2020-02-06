@@ -1,0 +1,44 @@
+// 移行定義書のファイルを探し、最終的にはcsvの必須チェックを確認するものを作成したい。
+// 現状は対象のディレクトリからファイルを探すところまで
+
+Sub 移行定義書読み取り()
+    Dim folderPass As String
+    Dim folder As FileDialog
+    Dim fileName As String
+    Dim colNum As Integer
+    ' ファイル名の配列
+    Dim fileNameArr As Collection
+    Set fileNameArr = New Collection
+    Dim fileNameCol As Integer
+    
+    ' ①対象のExcelが入ったフォルダを選択させる
+    Set folder = Application.FileDialog(msoFileDialogFolderPicker)
+    
+    ' キャンセルボタンクリック時にマクロを終了
+    If folder.Show = False Then Exit Sub
+    ' フォルダーのフルパスを変数に格納
+    folderPass = folder.SelectedItems(1)
+    
+    ' ②対象のフォルダにある移行定義のファイルを書き出す
+    Worksheets("定義設定").Select
+    colNum = 3
+    fileNameCol = 0
+    fileName = Dir(folderPass & "\" & "*移行定義書*.xls*")
+    
+    Do While fileName <> ""
+        Cells(colNum, 3).Value = fileName
+        With fileNameArr
+            .Add fileName
+        End With
+        colNum = colNum + 1
+        fileNameCol = fileNameCol + 1
+        fileName = Dir()
+    Loop
+    
+    ' ③そのファイルにある対象の移行定義のシートを書き出す
+    
+    
+    
+    '
+    MsgBox "ok"
+End Sub
