@@ -1,0 +1,168 @@
+Dim settei_Row As Long
+
+Sub 移行項目定義シート読み込み()
+    
+    Dim selectFolder As String
+    
+    On Error GoTo ErrEvent
+    
+    With Application
+        '.ScreenUpdating = False
+        '.EnableEvents = False
+        '.Calculation = xlCalculationManual
+    End With
+    
+    selectFolder = フォルダ選択
+    If selectFolder = "" Then
+        MsgBox "フォルダを指定してください"
+        Exit Sub
+    End If
+    
+    Dim inputFileName As String
+    inputFileName = Dir(selectFolder & "\*.xls*")
+    If inputFileName = "" Then
+        MsgBox "Excelファイルがありません。"
+        Exit Sub
+    End If
+    
+    '設定シートの記載内容削除 '削除対象.Range("5:100000")は一先ず適当
+    ThisWorkbook.Sheets("定義設定").Select
+    Range("A1").Select
+    Range("5:100000").Delete
+    
+    settei_Row = 5
+    Do
+        If InStr(1, inputFileName, "移行定義書") > 0 Then
+            Call 定義設定シート更新(selectFolder, inputFileName)
+        End If
+        inputFileName = Dir
+    Loop Until inputFileName = ""
+    
+    With Application
+        '.ScreenUpdating = True
+        '.EnableEvents = True
+        '.Calculation = xlCalculationAutomatic
+    End With
+    
+    MsgBox "終了♪"
+    Exit Sub
+    
+ErrEvent:
+    With Application
+        '.ScreenUpdating = True
+        '.EnableEvents = True
+        '.Calculation = xlCalculationAutomatic
+    End With
+    MsgBox "エラー発生。ディレクトリの内容を確認してから再実行ください"
+
+End Sub
+    
+    
+Sub 定義設定シート更新(folderPath As String, inputFile As String)
+
+    Dim inputWorkBook As Workbook
+    Dim inputWorkSheet As Worksheet
+    Dim workSheetName As String
+    
+    Dim tmpRange As Range
+    Dim tmpRow   As Long
+    Dim tmpCnt   As Long
+
+    Dim hdrColList As String
+    Dim chkColList As String
+    Dim tmpHissu As String
+    
+    Dim hdRow    As Long
+    Dim noCol    As Long
+    Dim dataRowS As Long
+    Dim dataRowE As Long
+    
+    Dim toriCol  As Long
+    Dim hissuCol As Long
+    Dim riyoCol  As Long
+    
+    Set inputWorkBook = Workbooks.Open(filename:=folderPath & "\" & inputFile, ReadOnly:=True, UpdateLinks:=False)
+    
+    workSheetName = ""
+    For tmpCnt = 1 To inputWorkBook.Sheets.Count
+        If InStr(1, inputWorkBook.Sheets(tmpCnt).Name, "移行項目定義") > 0 And inputWorkBook.Sheets(tmpCnt).Visible = True Then
+            Set inputWorkSheet = inputWorkBook.Sheets(tmpCnt)
+            workSheetName = inputWorkSheet.Name
+            
+            With inputWorkSheet
+            
+                '''NO欄に記載がある列を対象列と判断する。
+                .Select
+                .Range("A1").Select
+                Set tmpRange = .Cells.find(What:="NO", LookAt:=xlWhole)
+                tmpRange.Select
+                noCol = tmpRange.Column
+                hdRow = tmpRange.Row
+                Set tmpRange = Selection.End(xlToRight).EntireColumn
+                
+                dataRowS = hdRow + 1
+                dataRowE = .Cells.SpecialCells(xlLastCell).Row
+                
+                '''ヘッダ行から物理項目名欄、必須区分欄、利用区分欄の列位置を取得する。
+                Set tmpRange = .Rows(hdRow).find(What:="取込ファイルヘッダ", LookAt:=xlWhole)
+                toriCol = tmpRange.Column
+                Set tmpRange = .Rows(hdRow).find(What:="必須区分", LookAt:=xlWhole)
+                hissuCol = tmpRange.Column
+                Set tmpRange = .Rows(hdRow).find(What:="利用区分", LookAt:=xlWhole)
+                riyoCol = tmpRange.Column
+                
+        
+                tmpRow = dataRowS
+                hdrColList = ""
+                chkColList = ""
+                Do
+                    tmpHissu = .Cells(tmpRow, hissuCol)
+                    If .Cells(tmpRow, noCol) <> "例" _
+                    And .Cells(tmpRow, riyoCol) = "◎" Then
+                        hdrColList = hdrColList & "," & .Cells(tmpRow, toriCol)
+                        If (tmpHissu = "○" Or tmpHissu = "〇" Or tmpHissu = "◯") Then
+                            chkColList = chkColList & "," & .Cells(tmpRow, toriCol)
+                        End If
+                    End If
+                    tmpRow = tmpRow + 1
+                Loop Until tmpRow > dataRowE
+                
+                ThisWorkbook.Sheets("定義設定").Range("C" & settei_Row) = inputFile
+                ThisWorkbook.Sheets("定義設定").Range("D" & settei_Row) = workSheetName
+                ThisWorkbook.Sheets("定義設定").Range("E" & settei_Row) = Replace(hdrColList, ",", "", 1, 1)
+                ThisWorkbook.Sheets("定義設定").Range("F" & settei_Row) = Replace(chkColList, ",", "", 1, 1)
+                ThisWorkbook.Sheets("定義設定").Range("G" & settei_Row) = "-"
+                settei_Row = settei_Row + 1
+            
+            End With
+        End If
+    Next
+    
+    inputWorkBook.Close savechanges:=False
+
+End Sub
+
+Function findNo() As String
+  'ヘッダ項目の位置を特定するロジック
+  '全体検索せずにある程度絞り込んだ範囲を検索する
+  Dim tmpRange As Range
+  
+  ThisWorkbook.Sheets("定義設定").Select
+  Set tmpRange = Range("B5:D7").find(What:="hoge")
+  findNo = tmpRange.Address
+End Function
+
+Function フォルダ選択() As String
+
+    フォルダ選択 = ""
+ 
+    If Application.FileDialog(msoFileDialogFolderPicker).Show = True Then
+    
+        フォルダ選択 = Application.FileDialog(msoFileDialogFolderPicker).SelectedItems(1)
+        
+    End If
+        
+End Function
+
+
+
